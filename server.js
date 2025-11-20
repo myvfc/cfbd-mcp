@@ -199,3 +199,9 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`CFBD Key: ${CFBD_API_KEY ? 'SET' : 'MISSING'}`);
   console.log(`MCP Key: ${MCP_API_KEY ? 'SET' : 'NONE'}\n`);
 });
+
+// Keep alive - ping self every 30 seconds
+setInterval(() => {
+  fetch(`http://localhost:${PORT}/health`).catch(() => {});
+  console.log(`💓 Alive: ${Math.floor(process.uptime())}s`);
+}, 30000);
