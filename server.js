@@ -1,4 +1,3 @@
-
 import express from 'express';
 
 const app = express();
@@ -144,7 +143,7 @@ app.all('/mcp', async (req, res) => {
           
           for (const [cat, players] of Object.entries(byCategory)) {
             text += `${cat.toUpperCase()}:\n`;
-            players.slice(0, 5).forEach(p => {
+            players.forEach(p => {
               text += `  ${p.player}: ${p.statType} = ${p.stat}\n`;
             });
             text += '\n';
