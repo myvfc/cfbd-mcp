@@ -94,9 +94,11 @@ app.all('/mcp', async (req, res) => {
           });
         }
         
-        const team = args.team || 'oklahoma';
+        const team = (args.team || 'oklahoma').toLowerCase();
         const year = args.year || 2025;
         const url = `https://api.collegefootballdata.com/stats/player/season?year=${year}&team=${team}`;
+        
+        console.log(`  Fetching: ${url}`);
         
         console.log(`  Fetching from CFBD...`);
         
