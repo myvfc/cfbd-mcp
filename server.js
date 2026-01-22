@@ -1043,109 +1043,83 @@ app.all('/mcp', async (req, res) => {
         }
       }
       
-      // TOOL 13: Get Team Matchup
-      if (name === 'get_team_matchup') {
-        if (!CFBD_API_KEY) {
-          return res.json({
-            jsonrpc: '2.0',
-            result: { content: [{ type: 'text', text: 'Error: CFBD API key not configured' }] },
-            id
-          });
-        }
-        
-        const team1 = args.team1?.toLowerCase();
-        const team2 = args.team2?.toLowerCase();
-        const minYear = args.minYear || 2000;
-        const url = `https://api.collegefootballdata.com/games?team=${team1}&minYear=${minYear}`;
-        console.log(`  Fetching: ${url}`);
-        
-        try {
-          const response = await fetch(url, {
-            headers: { Authorization: `Bearer ${CFBD_API_KEY}` },
-            signal: AbortSignal.timeout(10000)
-          });
-          
-          if (!response.ok) {
-            return res.json({
-              jsonrpc: '2.0',
-              result: { content: [{ type: 'text', text: `CFBD API error: ${response.status}` }] },
-              id
-            });
-          }
-          
-          const data = await response.json();
-          
-          // Filter for games against team2
-          const matchups = data.filter(g => 
-            g.home_team?.toLowerCase() === team2 || g.away_team?.toLowerCase() === team2
-          );
-          
-          if (matchups.length === 0) {
-            return res.json({
-              jsonrpc: '2.0',
-              result: { content: [{ type: 'text', text: `No matchups found between ${team1} and ${team2} since ${minYear}` }] },
-              id
-            });
-          }
-          
-          let text = `🏈 ${team1.toUpperCase()} vs ${team2.toUpperCase()} (since ${minYear})\n\n`;
-          
-          let team1Wins = 0, team2Wins = 0;
-          
-          matchups.forEach(game => {
-            const team1Home = game.home_team?.toLowerCase() === team1;
-            const team1Score = team1Home ? game.home_points : game.away_points;
-            const team2Score = team1Home ? game.away_points : game.home_points;
-            const winner = team1Score > team2Score ? team1 : team2;
-            
-            if (winner === team1) team1Wins++;
-            else team2Wins++;
-            
-            const year = game.season;
-            text += `${year}: ${team1.toUpperCase()} ${team1Score}-${team2Score} ${team2.toUpperCase()}\n`;
-          });
-          
-          text += `\nSeries Record: ${team1.toUpperCase()} ${team1Wins}-${team2Wins} ${team2.toUpperCase()}\n`;
-          
-          return res.json({
-            jsonrpc: '2.0',
-            result: { content: [{ type: 'text', text }] },
-            id
-          });
-          
-        } catch (err) {
-          console.error('  Error:', err.message);
-          return res.json({
-            jsonrpc: '2.0',
-            result: { content: [{ type: 'text', text: `Error: ${err.message}` }] },
-            id
-          });
-        }
-      }
-      
+     // TOOL 13: Get Team Matchup - FIXED VERSION
+if (name === 'get_team_matchup') {
+  if (!CFBD_API_KEY) {
+    return res.json({
+      jsonrpc: '2.0',
+      result: { content: [{ type: 'text', text: 'Error: CFBD API key not configured' }] },
+      id
+    });
+  }
+  
+  const team1 = args.team1?.toLowerCase();
+  const team2 = args.team2?.toLowerCase();
+  const minYear = args.minYear || 1900;
+  
+  // Use the dedicated team matchup endpoint
+  const url = `https://api.collegefootballdata.com/teams/matchup?team1=${team1}&team2=${team2}&minYear=${minYear}`;
+  console.log(`  Fetching: ${url}`);
+  
+  try {
+    const response = await fetch(url, {
+      headers: { Authorization: `Bearer ${CFBD_API_KEY}` },
+      signal: AbortSignal.timeout(10000)
+    });
+    
+    if (!response.ok) {
       return res.json({
         jsonrpc: '2.0',
-        error: { code: -32601, message: `Unknown tool: ${name}` },
+        result: { content: [{ type: 'text', text: `CFBD API error: ${response.status}` }] },
         id
       });
     }
     
-    // Unknown method
+    const data = await response.json();
+    
+    if (!data || !data.games || data.games.length === 0) {
+      return res.json({
+        jsonrpc: '2.0',
+        result: { content: [{ type: 'text', text: `No matchups found between ${team1} and ${team2} since ${minYear}` }] },
+        id
+      });
+    }
+    
+    let text = `🏈 ${team1.toUpperCase()} vs ${team2.toUpperCase()} ALL-TIME\n\n`;
+    
+    // Overall series record
+    text += `Series Record: ${team1.toUpperCase()} leads ${data.team1Wins}-${data.team2Wins}`;
+    if (data.ties > 0) text += `-${data.ties}`;
+    text += `\n\n`;
+    
+    // Recent games (last 10)
+    text += `RECENT MATCHUPS:\n`;
+    const recentGames = data.games.slice(-10).reverse();
+    
+    recentGames.forEach(game => {
+      const year = game.season;
+      const team1Score = game.homeTeam?.toLowerCase() === team1 ? game.homeScore : game.awayScore;
+      const team2Score = game.homeTeam?.toLowerCase() === team1 ? game.awayScore : game.homeScore;
+      const winner = team1Score > team2Score ? team1.toUpperCase() : team2.toUpperCase();
+      
+      text += `${year}: ${winner} won ${Math.max(team1Score, team2Score)}-${Math.min(team1Score, team2Score)}\n`;
+    });
+    
+    text += `\nTotal games played: ${data.games.length}\n`;
+    
     return res.json({
       jsonrpc: '2.0',
-      error: { code: -32601, message: `Unknown method: ${method}` },
+      result: { content: [{ type: 'text', text }] },
       id
     });
     
-  } catch (error) {
-    console.error('MCP error:', error);
-    return res.status(500).json({
+  } catch (err) {
+    console.error('  Error:', err.message);
+    return res.json({
       jsonrpc: '2.0',
-      error: { code: -32603, message: error.message },
-      id: req.body?.id
+      result: { content: [{ type: 'text', text: `Error: ${err.message}` }] },
+      id
     });
-  }
-});
 
 // Start server
 app.listen(PORT, '0.0.0.0', () => {
