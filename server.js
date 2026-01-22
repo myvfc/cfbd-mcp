@@ -240,7 +240,7 @@ app.all('/mcp', async (req, res) => {
       const team = (args.team || 'oklahoma').toLowerCase();
       const year = args.year || 2024;
       
-      // TOOL 1: Get Player Stats
+      // TOOL 1: Get Player Stats ✅ UPDATED WITH PLAYER NAME FILTERING
       if (name === 'get_player_stats') {
         const url = `https://api.collegefootballdata.com/stats/player/season?team=${team}&year=${year}`;
         console.log(`  Fetching: ${url}`);
@@ -264,39 +264,121 @@ app.all('/mcp', async (req, res) => {
           if (!data || data.length === 0) {
             return res.json({
               jsonrpc: '2.0',
-              result: { content: [{ type: 'text', text: `No player stats found for ${team} in ${year}` }] },
+              result: { content: [{ type: 'text', text: `No player stats found for ${team.toUpperCase()} in ${year}` }] },
               id
             });
           }
           
-          // Group by category
-          const passing = data.filter(p => p.category === 'passing').slice(0, 5);
-          const rushing = data.filter(p => p.category === 'rushing').slice(0, 5);
-          const receiving = data.filter(p => p.category === 'receiving').slice(0, 5);
+          // Extract player name from query if provided
+          let playerName = null;
+          if (args.query) {
+            // Look for capitalized names: "John Mateer", "Dillon Gabriel", etc.
+            const nameMatch = args.query.match(/\b([A-Z][a-z]+(?:\s+[A-Z][a-z']+)+)\b/);
+            if (nameMatch) {
+              playerName = nameMatch[1].trim();
+              console.log(`  Extracted player name: ${playerName}`);
+            }
+          }
+          
+          // If player name specified, filter to just that player
+          let filteredData = data;
+          if (playerName) {
+            filteredData = data.filter(p => 
+              p.player?.toLowerCase().includes(playerName.toLowerCase()) ||
+              playerName.toLowerCase().includes(p.player?.toLowerCase())
+            );
+            
+            if (filteredData.length === 0) {
+              return res.json({
+                jsonrpc: '2.0',
+                result: { 
+                  content: [{ 
+                    type: 'text', 
+                    text: `${playerName} is not listed in ${team.toUpperCase()}'s ${year} roster.\n\nThis player may:\n• Play for a different team\n• Not have recorded stats this season\n• Have a different spelling of their name\n\nTry searching without the player name to see all ${team.toUpperCase()} players.` 
+                  }] 
+                },
+                id
+              });
+            }
+          }
+          
+          // Group by player and category
+          const playerStats = {};
+          
+          filteredData.forEach(stat => {
+            const player = stat.player;
+            if (!playerStats[player]) {
+              playerStats[player] = { passing: [], rushing: [], receiving: [] };
+            }
+            
+            const category = stat.category?.toLowerCase();
+            if (category === 'passing' || category === 'rushing' || category === 'receiving') {
+              playerStats[player][category].push({
+                statType: stat.statType,
+                stat: stat.stat
+              });
+            }
+          });
           
           let text = `🏈 ${team.toUpperCase()} PLAYER STATS - ${year}\n\n`;
           
-          if (passing.length > 0) {
-            text += `PASSING:\n`;
-            passing.forEach(p => {
-              text += `${p.player}: ${p.stat} yards\n`;
-            });
-            text += `\n`;
-          }
-          
-          if (rushing.length > 0) {
-            text += `RUSHING:\n`;
-            rushing.forEach(p => {
-              text += `${p.player}: ${p.stat} yards\n`;
-            });
-            text += `\n`;
-          }
-          
-          if (receiving.length > 0) {
-            text += `RECEIVING:\n`;
-            receiving.forEach(p => {
-              text += `${p.player}: ${p.stat} yards\n`;
-            });
+          // If searching for specific player, show detailed stats
+          if (playerName && Object.keys(playerStats).length === 1) {
+            const player = Object.keys(playerStats)[0];
+            text = `🏈 ${player.toUpperCase()} - ${year}\n\n`;
+            
+            const stats = playerStats[player];
+            
+            if (stats.passing.length > 0) {
+              text += `PASSING:\n`;
+              stats.passing.forEach(s => {
+                text += `${s.statType}: ${s.stat}\n`;
+              });
+              text += `\n`;
+            }
+            
+            if (stats.rushing.length > 0) {
+              text += `RUSHING:\n`;
+              stats.rushing.forEach(s => {
+                text += `${s.statType}: ${s.stat}\n`;
+              });
+              text += `\n`;
+            }
+            
+            if (stats.receiving.length > 0) {
+              text += `RECEIVING:\n`;
+              stats.receiving.forEach(s => {
+                text += `${s.statType}: ${s.stat}\n`;
+              });
+            }
+          } else {
+            // Show top players by category
+            const passingLeaders = data.filter(p => p.category === 'passing' && p.statType === 'YDS').slice(0, 5);
+            const rushingLeaders = data.filter(p => p.category === 'rushing' && p.statType === 'YDS').slice(0, 5);
+            const receivingLeaders = data.filter(p => p.category === 'receiving' && p.statType === 'YDS').slice(0, 5);
+            
+            if (passingLeaders.length > 0) {
+              text += `PASSING LEADERS:\n`;
+              passingLeaders.forEach(p => {
+                text += `${p.player}: ${p.stat} yards\n`;
+              });
+              text += `\n`;
+            }
+            
+            if (rushingLeaders.length > 0) {
+              text += `RUSHING LEADERS:\n`;
+              rushingLeaders.forEach(p => {
+                text += `${p.player}: ${p.stat} yards\n`;
+              });
+              text += `\n`;
+            }
+            
+            if (receivingLeaders.length > 0) {
+              text += `RECEIVING LEADERS:\n`;
+              receivingLeaders.forEach(p => {
+                text += `${p.player}: ${p.stat} yards\n`;
+              });
+            }
           }
           
           return res.json({
@@ -1141,4 +1223,5 @@ setInterval(() => {
   fetch(`http://localhost:${PORT}/health`).catch(() => {});
   console.log(`💓 Alive: ${Math.floor(process.uptime())}s`);
 }, 30000);
+
 
