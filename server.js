@@ -227,28 +227,751 @@ app.all('/mcp', async (req, res) => {
     // Call tool
     if (method === 'tools/call') {
       const { name, arguments: args } = params;
-      console.log(`  Tool: ${name}, Args:`, args);
+      console.log(`  Tool call: ${name}`, args);
+      
+      if (!CFBD_API_KEY) {
+        return res.json({
+          jsonrpc: '2.0',
+          result: { content: [{ type: 'text', text: 'Error: CFBD API key not configured' }] },
+          id
+        });
+      }
       
       const team = (args.team || 'oklahoma').toLowerCase();
       const year = args.year || 2024;
       
-      // [TOOLS 1-12 remain exactly the same as original - keeping them unchanged]
-      
-      // TOOL 13: Get Team Matchup - FIXED
-      if (name === 'get_team_matchup') {
-        if (!CFBD_API_KEY) {
+      // TOOL 1: Get Player Stats
+      if (name === 'get_player_stats') {
+        const url = `https://api.collegefootballdata.com/stats/player/season?team=${team}&year=${year}`;
+        console.log(`  Fetching: ${url}`);
+        
+        try {
+          const response = await fetch(url, {
+            headers: { Authorization: `Bearer ${CFBD_API_KEY}` },
+            signal: AbortSignal.timeout(10000)
+          });
+          
+          if (!response.ok) {
+            return res.json({
+              jsonrpc: '2.0',
+              result: { content: [{ type: 'text', text: `CFBD API error: ${response.status}` }] },
+              id
+            });
+          }
+          
+          const data = await response.json();
+          
+          if (!data || data.length === 0) {
+            return res.json({
+              jsonrpc: '2.0',
+              result: { content: [{ type: 'text', text: `No player stats found for ${team} in ${year}` }] },
+              id
+            });
+          }
+          
+          // Group by category
+          const passing = data.filter(p => p.category === 'passing').slice(0, 5);
+          const rushing = data.filter(p => p.category === 'rushing').slice(0, 5);
+          const receiving = data.filter(p => p.category === 'receiving').slice(0, 5);
+          
+          let text = `🏈 ${team.toUpperCase()} PLAYER STATS - ${year}\n\n`;
+          
+          if (passing.length > 0) {
+            text += `PASSING:\n`;
+            passing.forEach(p => {
+              text += `${p.player}: ${p.stat} yards\n`;
+            });
+            text += `\n`;
+          }
+          
+          if (rushing.length > 0) {
+            text += `RUSHING:\n`;
+            rushing.forEach(p => {
+              text += `${p.player}: ${p.stat} yards\n`;
+            });
+            text += `\n`;
+          }
+          
+          if (receiving.length > 0) {
+            text += `RECEIVING:\n`;
+            receiving.forEach(p => {
+              text += `${p.player}: ${p.stat} yards\n`;
+            });
+          }
+          
           return res.json({
             jsonrpc: '2.0',
-            result: { content: [{ type: 'text', text: 'Error: CFBD API key not configured' }] },
+            result: { content: [{ type: 'text', text }] },
+            id
+          });
+          
+        } catch (err) {
+          console.error('  Error:', err.message);
+          return res.json({
+            jsonrpc: '2.0',
+            result: { content: [{ type: 'text', text: `Error: ${err.message}` }] },
+            id
+          });
+        }
+      }
+      
+      // TOOL 2: Get Team Stats
+      if (name === 'get_team_stats') {
+        const url = `https://api.collegefootballdata.com/stats/season?team=${team}&year=${year}`;
+        console.log(`  Fetching: ${url}`);
+        
+        try {
+          const response = await fetch(url, {
+            headers: { Authorization: `Bearer ${CFBD_API_KEY}` },
+            signal: AbortSignal.timeout(10000)
+          });
+          
+          if (!response.ok) {
+            return res.json({
+              jsonrpc: '2.0',
+              result: { content: [{ type: 'text', text: `CFBD API error: ${response.status}` }] },
+              id
+            });
+          }
+          
+          const data = await response.json();
+          
+          if (!data || data.length === 0) {
+            return res.json({
+              jsonrpc: '2.0',
+              result: { content: [{ type: 'text', text: `No team stats found for ${team} in ${year}` }] },
+              id
+            });
+          }
+          
+          const stats = data[0] || {};
+          let text = `🏈 ${team.toUpperCase()} TEAM STATS - ${year}\n\n`;
+          
+          if (stats.games) text += `Games: ${stats.games}\n`;
+          if (stats.totalYards) text += `Total Yards: ${stats.totalYards}\n`;
+          if (stats.netPassingYards) text += `Passing Yards: ${stats.netPassingYards}\n`;
+          if (stats.rushingYards) text += `Rushing Yards: ${stats.rushingYards}\n`;
+          if (stats.totalTDs) text += `Total TDs: ${stats.totalTDs}\n`;
+          if (stats.turnovers) text += `Turnovers: ${stats.turnovers}\n`;
+          
+          return res.json({
+            jsonrpc: '2.0',
+            result: { content: [{ type: 'text', text }] },
+            id
+          });
+          
+        } catch (err) {
+          console.error('  Error:', err.message);
+          return res.json({
+            jsonrpc: '2.0',
+            result: { content: [{ type: 'text', text: `Error: ${err.message}` }] },
+            id
+          });
+        }
+      }
+      
+      // TOOL 3: Get Game Stats
+      if (name === 'get_game_stats') {
+        const url = `https://api.collegefootballdata.com/games?team=${team}&year=${year}`;
+        console.log(`  Fetching: ${url}`);
+        
+        try {
+          const response = await fetch(url, {
+            headers: { Authorization: `Bearer ${CFBD_API_KEY}` },
+            signal: AbortSignal.timeout(10000)
+          });
+          
+          if (!response.ok) {
+            return res.json({
+              jsonrpc: '2.0',
+              result: { content: [{ type: 'text', text: `CFBD API error: ${response.status}` }] },
+              id
+            });
+          }
+          
+          const data = await response.json();
+          
+          if (!data || data.length === 0) {
+            return res.json({
+              jsonrpc: '2.0',
+              result: { content: [{ type: 'text', text: `No games found for ${team} in ${year}` }] },
+              id
+            });
+          }
+          
+          let text = `🏈 ${team.toUpperCase()} GAME-BY-GAME - ${year}\n\n`;
+          
+          data.forEach(game => {
+            const isHome = game.home_team?.toLowerCase() === team;
+            const opponent = isHome ? game.away_team : game.home_team;
+            const teamScore = isHome ? game.home_points : game.away_points;
+            const oppScore = isHome ? game.away_points : game.home_points;
+            const result = teamScore > oppScore ? 'W' : teamScore < oppScore ? 'L' : 'T';
+            
+            text += `Week ${game.week}: ${result} vs ${opponent} ${teamScore}-${oppScore}\n`;
+          });
+          
+          const wins = data.filter(g => {
+            const isHome = g.home_team?.toLowerCase() === team;
+            const teamScore = isHome ? g.home_points : g.away_points;
+            const oppScore = isHome ? g.away_points : g.home_points;
+            return teamScore > oppScore;
+          }).length;
+          
+          text += `\nRecord: ${wins}-${data.length - wins}`;
+          
+          return res.json({
+            jsonrpc: '2.0',
+            result: { content: [{ type: 'text', text }] },
+            id
+          });
+          
+        } catch (err) {
+          console.error('  Error:', err.message);
+          return res.json({
+            jsonrpc: '2.0',
+            result: { content: [{ type: 'text', text: `Error: ${err.message}` }] },
+            id
+          });
+        }
+      }
+      
+      // TOOL 4: Get Recruiting
+      if (name === 'get_recruiting') {
+        const recruitYear = args.year || 2025;
+        const url = `https://api.collegefootballdata.com/recruiting/teams?team=${team}&year=${recruitYear}`;
+        console.log(`  Fetching: ${url}`);
+        
+        try {
+          const response = await fetch(url, {
+            headers: { Authorization: `Bearer ${CFBD_API_KEY}` },
+            signal: AbortSignal.timeout(10000)
+          });
+          
+          if (!response.ok) {
+            return res.json({
+              jsonrpc: '2.0',
+              result: { content: [{ type: 'text', text: `CFBD API error: ${response.status}` }] },
+              id
+            });
+          }
+          
+          const data = await response.json();
+          
+          if (!data || data.length === 0) {
+            return res.json({
+              jsonrpc: '2.0',
+              result: { content: [{ type: 'text', text: `No recruiting data found for ${team} in ${recruitYear}` }] },
+              id
+            });
+          }
+          
+          const recruiting = data[0] || {};
+          let text = `🏈 ${team.toUpperCase()} RECRUITING - ${recruitYear}\n\n`;
+          
+          if (recruiting.rank) text += `National Rank: #${recruiting.rank}\n`;
+          if (recruiting.points) text += `Points: ${recruiting.points}\n`;
+          
+          return res.json({
+            jsonrpc: '2.0',
+            result: { content: [{ type: 'text', text }] },
+            id
+          });
+          
+        } catch (err) {
+          console.error('  Error:', err.message);
+          return res.json({
+            jsonrpc: '2.0',
+            result: { content: [{ type: 'text', text: `Error: ${err.message}` }] },
+            id
+          });
+        }
+      }
+      
+      // TOOL 5: Get Schedule
+      if (name === 'get_schedule') {
+        const url = `https://api.collegefootballdata.com/games?team=${team}&year=${year}`;
+        console.log(`  Fetching: ${url}`);
+        
+        try {
+          const response = await fetch(url, {
+            headers: { Authorization: `Bearer ${CFBD_API_KEY}` },
+            signal: AbortSignal.timeout(10000)
+          });
+          
+          if (!response.ok) {
+            return res.json({
+              jsonrpc: '2.0',
+              result: { content: [{ type: 'text', text: `CFBD API error: ${response.status}` }] },
+              id
+            });
+          }
+          
+          const data = await response.json();
+          
+          if (!data || data.length === 0) {
+            return res.json({
+              jsonrpc: '2.0',
+              result: { content: [{ type: 'text', text: `No schedule found for ${team} in ${year}` }] },
+              id
+            });
+          }
+          
+          let text = `🏈 ${team.toUpperCase()} SCHEDULE - ${year}\n\n`;
+          
+          data.forEach(game => {
+            const isHome = game.home_team?.toLowerCase() === team;
+            const opponent = isHome ? game.away_team : game.home_team;
+            const location = isHome ? 'vs' : '@';
+            
+            text += `Week ${game.week}: ${location} ${opponent}\n`;
+          });
+          
+          return res.json({
+            jsonrpc: '2.0',
+            result: { content: [{ type: 'text', text }] },
+            id
+          });
+          
+        } catch (err) {
+          console.error('  Error:', err.message);
+          return res.json({
+            jsonrpc: '2.0',
+            result: { content: [{ type: 'text', text: `Error: ${err.message}` }] },
+            id
+          });
+        }
+      }
+      
+      // TOOL 6: Get Play by Play
+      if (name === 'get_play_by_play') {
+        const gameId = args.gameId;
+        if (!gameId) {
+          return res.json({
+            jsonrpc: '2.0',
+            result: { content: [{ type: 'text', text: 'Error: gameId required' }] },
             id
           });
         }
         
+        const url = `https://api.collegefootballdata.com/plays?gameId=${gameId}`;
+        console.log(`  Fetching: ${url}`);
+        
+        try {
+          const response = await fetch(url, {
+            headers: { Authorization: `Bearer ${CFBD_API_KEY}` },
+            signal: AbortSignal.timeout(10000)
+          });
+          
+          if (!response.ok) {
+            return res.json({
+              jsonrpc: '2.0',
+              result: { content: [{ type: 'text', text: `CFBD API error: ${response.status}` }] },
+              id
+            });
+          }
+          
+          const data = await response.json();
+          
+          if (!data || data.length === 0) {
+            return res.json({
+              jsonrpc: '2.0',
+              result: { content: [{ type: 'text', text: `No play-by-play found for game ${gameId}` }] },
+              id
+            });
+          }
+          
+          let text = `🏈 PLAY-BY-PLAY - Game ${gameId}\n\n`;
+          
+          // Show scoring plays only
+          const scoringPlays = data.filter(p => p.scoringPlay);
+          scoringPlays.slice(0, 20).forEach(play => {
+            text += `Q${play.period} ${play.clock}: ${play.playText}\n`;
+          });
+          
+          return res.json({
+            jsonrpc: '2.0',
+            result: { content: [{ type: 'text', text }] },
+            id
+          });
+          
+        } catch (err) {
+          console.error('  Error:', err.message);
+          return res.json({
+            jsonrpc: '2.0',
+            result: { content: [{ type: 'text', text: `Error: ${err.message}` }] },
+            id
+          });
+        }
+      }
+      
+      // TOOL 7: Get Conference Standings
+      if (name === 'get_conference_standings') {
+        const conference = args.conference || 'SEC';
+        const standingsYear = args.year || 2024;
+        const url = `https://api.collegefootballdata.com/standings?conference=${conference}&year=${standingsYear}`;
+        console.log(`  Fetching: ${url}`);
+        
+        try {
+          const response = await fetch(url, {
+            headers: { Authorization: `Bearer ${CFBD_API_KEY}` },
+            signal: AbortSignal.timeout(10000)
+          });
+          
+          if (!response.ok) {
+            return res.json({
+              jsonrpc: '2.0',
+              result: { content: [{ type: 'text', text: `CFBD API error: ${response.status}` }] },
+              id
+            });
+          }
+          
+          const data = await response.json();
+          
+          if (!data || data.length === 0) {
+            return res.json({
+              jsonrpc: '2.0',
+              result: { content: [{ type: 'text', text: `No standings found for ${conference} in ${standingsYear}` }] },
+              id
+            });
+          }
+          
+          let text = `🏈 ${conference.toUpperCase()} STANDINGS - ${standingsYear}\n\n`;
+          
+          data.forEach((team, index) => {
+            text += `${index + 1}. ${team.team} (${team.wins}-${team.losses})\n`;
+          });
+          
+          return res.json({
+            jsonrpc: '2.0',
+            result: { content: [{ type: 'text', text }] },
+            id
+          });
+          
+        } catch (err) {
+          console.error('  Error:', err.message);
+          return res.json({
+            jsonrpc: '2.0',
+            result: { content: [{ type: 'text', text: `Error: ${err.message}` }] },
+            id
+          });
+        }
+      }
+      
+      // TOOL 8: Get Team Rankings
+      if (name === 'get_team_rankings') {
+        const url = `https://api.collegefootballdata.com/rankings?year=${year}&team=${team}`;
+        console.log(`  Fetching: ${url}`);
+        
+        try {
+          const response = await fetch(url, {
+            headers: { Authorization: `Bearer ${CFBD_API_KEY}` },
+            signal: AbortSignal.timeout(10000)
+          });
+          
+          if (!response.ok) {
+            return res.json({
+              jsonrpc: '2.0',
+              result: { content: [{ type: 'text', text: `CFBD API error: ${response.status}` }] },
+              id
+            });
+          }
+          
+          const data = await response.json();
+          
+          if (!data || data.length === 0) {
+            return res.json({
+              jsonrpc: '2.0',
+              result: { content: [{ type: 'text', text: `No rankings found for ${team} in ${year}` }] },
+              id
+            });
+          }
+          
+          // Get final rankings (last week of season)
+          const finalWeek = data[data.length - 1];
+          
+          if (!finalWeek || !finalWeek.polls || finalWeek.polls.length === 0) {
+            return res.json({
+              jsonrpc: '2.0',
+              result: { content: [{ type: 'text', text: `No final rankings found for ${team} in ${year}` }] },
+              id
+            });
+          }
+          
+          let text = `🏈 ${team.toUpperCase()} RANKINGS - ${year}\n\n`;
+          text += `Week ${finalWeek.week} (${finalWeek.seasonType}):\n\n`;
+          
+          finalWeek.polls.forEach(poll => {
+            const teamRanking = poll.ranks.find(r => r.school?.toLowerCase() === team);
+            if (teamRanking) {
+              text += `${poll.poll}: #${teamRanking.rank}\n`;
+              if (teamRanking.firstPlaceVotes) {
+                text += `  First-place votes: ${teamRanking.firstPlaceVotes}\n`;
+              }
+              if (teamRanking.points) {
+                text += `  Points: ${teamRanking.points}\n`;
+              }
+            }
+          });
+          
+          return res.json({
+            jsonrpc: '2.0',
+            result: { content: [{ type: 'text', text }] },
+            id
+          });
+          
+        } catch (err) {
+          console.error('  Error:', err.message);
+          return res.json({
+            jsonrpc: '2.0',
+            result: { content: [{ type: 'text', text: `Error: ${err.message}` }] },
+            id
+          });
+        }
+      }
+      
+      // TOOL 9: Get Team Talent
+      if (name === 'get_team_talent') {
+        const url = `https://api.collegefootballdata.com/talent?year=${year}`;
+        console.log(`  Fetching: ${url}`);
+        
+        try {
+          const response = await fetch(url, {
+            headers: { Authorization: `Bearer ${CFBD_API_KEY}` },
+            signal: AbortSignal.timeout(10000)
+          });
+          
+          if (!response.ok) {
+            return res.json({
+              jsonrpc: '2.0',
+              result: { content: [{ type: 'text', text: `CFBD API error: ${response.status}` }] },
+              id
+            });
+          }
+          
+          const data = await response.json();
+          
+          if (!data || data.length === 0) {
+            return res.json({
+              jsonrpc: '2.0',
+              result: { content: [{ type: 'text', text: `No talent data found for ${year}` }] },
+              id
+            });
+          }
+          
+          const teamTalent = data.find(t => t.school?.toLowerCase() === team);
+          
+          if (!teamTalent) {
+            return res.json({
+              jsonrpc: '2.0',
+              result: { content: [{ type: 'text', text: `No talent data found for ${team} in ${year}` }] },
+              id
+            });
+          }
+          
+          let text = `🏈 ${team.toUpperCase()} TALENT COMPOSITE - ${year}\n\n`;
+          text += `Talent Rank: ${teamTalent.talent}\n`;
+          
+          return res.json({
+            jsonrpc: '2.0',
+            result: { content: [{ type: 'text', text }] },
+            id
+          });
+          
+        } catch (err) {
+          console.error('  Error:', err.message);
+          return res.json({
+            jsonrpc: '2.0',
+            result: { content: [{ type: 'text', text: `Error: ${err.message}` }] },
+            id
+          });
+        }
+      }
+      
+      // TOOL 10: Get Team Records
+      if (name === 'get_team_records') {
+        const startYear = args.startYear || 2020;
+        const endYear = args.endYear || 2024;
+        const url = `https://api.collegefootballdata.com/records?team=${team}&startYear=${startYear}&endYear=${endYear}`;
+        console.log(`  Fetching: ${url}`);
+        
+        try {
+          const response = await fetch(url, {
+            headers: { Authorization: `Bearer ${CFBD_API_KEY}` },
+            signal: AbortSignal.timeout(10000)
+          });
+          
+          if (!response.ok) {
+            return res.json({
+              jsonrpc: '2.0',
+              result: { content: [{ type: 'text', text: `CFBD API error: ${response.status}` }] },
+              id
+            });
+          }
+          
+          const data = await response.json();
+          
+          if (!data || data.length === 0) {
+            return res.json({
+              jsonrpc: '2.0',
+              result: { content: [{ type: 'text', text: `No records found for ${team} from ${startYear}-${endYear}` }] },
+              id
+            });
+          }
+          
+          let text = `🏈 ${team.toUpperCase()} RECORDS ${startYear}-${endYear}\n\n`;
+          
+          data.forEach(record => {
+            text += `${record.year}: ${record.total.wins}-${record.total.losses}`;
+            if (record.total.ties > 0) text += `-${record.total.ties}`;
+            text += `\n`;
+          });
+          
+          return res.json({
+            jsonrpc: '2.0',
+            result: { content: [{ type: 'text', text }] },
+            id
+          });
+          
+        } catch (err) {
+          console.error('  Error:', err.message);
+          return res.json({
+            jsonrpc: '2.0',
+            result: { content: [{ type: 'text', text: `Error: ${err.message}` }] },
+            id
+          });
+        }
+      }
+      
+      // TOOL 11: Get Venue Info
+      if (name === 'get_venue_info') {
+        const url = `https://api.collegefootballdata.com/venues`;
+        console.log(`  Fetching: ${url}`);
+        
+        try {
+          const response = await fetch(url, {
+            headers: { Authorization: `Bearer ${CFBD_API_KEY}` },
+            signal: AbortSignal.timeout(10000)
+          });
+          
+          if (!response.ok) {
+            return res.json({
+              jsonrpc: '2.0',
+              result: { content: [{ type: 'text', text: `CFBD API error: ${response.status}` }] },
+              id
+            });
+          }
+          
+          const data = await response.json();
+          
+          if (!data || data.length === 0) {
+            return res.json({
+              jsonrpc: '2.0',
+              result: { content: [{ type: 'text', text: `No venue data found` }] },
+              id
+            });
+          }
+          
+          // Find venue for team
+          const venue = data.find(v => 
+            v.name?.toLowerCase().includes(team) || 
+            (team === 'oklahoma' && v.name?.toLowerCase().includes('memorial'))
+          );
+          
+          if (!venue) {
+            return res.json({
+              jsonrpc: '2.0',
+              result: { content: [{ type: 'text', text: `No venue found for ${team}` }] },
+              id
+            });
+          }
+          
+          let text = `🏈 ${team.toUpperCase()} VENUE INFO\n\n`;
+          text += `Stadium: ${venue.name}\n`;
+          if (venue.capacity) text += `Capacity: ${venue.capacity.toLocaleString()}\n`;
+          if (venue.city) text += `Location: ${venue.city}, ${venue.state}\n`;
+          if (venue.grass !== undefined) text += `Surface: ${venue.grass ? 'Grass' : 'Turf'}\n`;
+          
+          return res.json({
+            jsonrpc: '2.0',
+            result: { content: [{ type: 'text', text }] },
+            id
+          });
+          
+        } catch (err) {
+          console.error('  Error:', err.message);
+          return res.json({
+            jsonrpc: '2.0',
+            result: { content: [{ type: 'text', text: `Error: ${err.message}` }] },
+            id
+          });
+        }
+      }
+      
+      // TOOL 12: Get Returning Production
+      if (name === 'get_returning_production') {
+        const url = `https://api.collegefootballdata.com/player/returning?team=${team}&year=${year}`;
+        console.log(`  Fetching: ${url}`);
+        
+        try {
+          const response = await fetch(url, {
+            headers: { Authorization: `Bearer ${CFBD_API_KEY}` },
+            signal: AbortSignal.timeout(10000)
+          });
+          
+          if (!response.ok) {
+            return res.json({
+              jsonrpc: '2.0',
+              result: { content: [{ type: 'text', text: `CFBD API error: ${response.status}` }] },
+              id
+            });
+          }
+          
+          const data = await response.json();
+          
+          if (!data || data.length === 0) {
+            return res.json({
+              jsonrpc: '2.0',
+              result: { content: [{ type: 'text', text: `No returning production data found for ${team} in ${year}` }] },
+              id
+            });
+          }
+          
+          const production = data[0] || {};
+          let text = `🏈 ${team.toUpperCase()} RETURNING PRODUCTION - ${year}\n\n`;
+          
+          if (production.passingUsage !== undefined) {
+            text += `Passing: ${(production.passingUsage * 100).toFixed(1)}%\n`;
+          }
+          if (production.rushingUsage !== undefined) {
+            text += `Rushing: ${(production.rushingUsage * 100).toFixed(1)}%\n`;
+          }
+          if (production.receivingUsage !== undefined) {
+            text += `Receiving: ${(production.receivingUsage * 100).toFixed(1)}%\n`;
+          }
+          
+          return res.json({
+            jsonrpc: '2.0',
+            result: { content: [{ type: 'text', text }] },
+            id
+          });
+          
+        } catch (err) {
+          console.error('  Error:', err.message);
+          return res.json({
+            jsonrpc: '2.0',
+            result: { content: [{ type: 'text', text: `Error: ${err.message}` }] },
+            id
+          });
+        }
+      }
+      
+      // TOOL 13: Get Team Matchup
+      if (name === 'get_team_matchup') {
         const team1 = args.team1?.toLowerCase();
         const team2 = args.team2?.toLowerCase();
         const minYear = args.minYear || 1900;
         
-        // Use the dedicated team matchup endpoint
         const url = `https://api.collegefootballdata.com/teams/matchup?team1=${team1}&team2=${team2}&minYear=${minYear}`;
         console.log(`  Fetching: ${url}`);
         
@@ -278,12 +1001,10 @@ app.all('/mcp', async (req, res) => {
           
           let text = `🏈 ${team1.toUpperCase()} vs ${team2.toUpperCase()} ALL-TIME\n\n`;
           
-          // Overall series record
           text += `Series Record: ${team1.toUpperCase()} leads ${data.team1Wins}-${data.team2Wins}`;
           if (data.ties > 0) text += `-${data.ties}`;
           text += `\n\n`;
           
-          // Recent games (last 10)
           text += `RECENT MATCHUPS:\n`;
           const recentGames = data.games.slice(-10).reverse();
           
@@ -314,6 +1035,7 @@ app.all('/mcp', async (req, res) => {
         }
       }
       
+      // Unknown tool
       return res.json({
         jsonrpc: '2.0',
         error: { code: -32601, message: `Unknown tool: ${name}` },
@@ -346,7 +1068,7 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`MCP Key: ${MCP_API_KEY ? 'SET ✓' : 'NONE'}\n`);
 });
 
-// Keep alive - ping self every 30 seconds
+// Keep alive
 setInterval(() => {
   fetch(`http://localhost:${PORT}/health`).catch(() => {});
   console.log(`💓 Alive: ${Math.floor(process.uptime())}s`);
