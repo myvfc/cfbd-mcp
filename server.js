@@ -680,7 +680,7 @@ app.all('/mcp', async (req, res) => {
         }
       }
       
-      // TOOL 8: Get Team Rankings
+      // TOOL 8: Get Team Rankings ✅ UPDATED WITH NO-DATA HANDLING
       if (name === 'get_team_rankings') {
         const url = `https://api.collegefootballdata.com/rankings?year=${year}&team=${team}`;
         console.log(`  Fetching: ${url}`);
@@ -701,10 +701,11 @@ app.all('/mcp', async (req, res) => {
           
           const data = await response.json();
           
+          // STEP 1: No data at all
           if (!data || data.length === 0) {
             return res.json({
               jsonrpc: '2.0',
-              result: { content: [{ type: 'text', text: `No rankings found for ${team} in ${year}` }] },
+              result: { content: [{ type: 'text', text: `${team.toUpperCase()} was not ranked at any point during the ${year} season.` }] },
               id
             });
           }
@@ -723,9 +724,12 @@ app.all('/mcp', async (req, res) => {
           let text = `🏈 ${team.toUpperCase()} RANKINGS - ${year}\n\n`;
           text += `Week ${finalWeek.week} (${finalWeek.seasonType}):\n\n`;
           
+          let foundRankings = false;
+          
           finalWeek.polls.forEach(poll => {
             const teamRanking = poll.ranks.find(r => r.school?.toLowerCase() === team);
             if (teamRanking) {
+              foundRankings = true;
               text += `${poll.poll}: #${teamRanking.rank}\n`;
               if (teamRanking.firstPlaceVotes) {
                 text += `  First-place votes: ${teamRanking.firstPlaceVotes}\n`;
@@ -735,6 +739,13 @@ app.all('/mcp', async (req, res) => {
               }
             }
           });
+          
+          // STEP 2: Team wasn't in any final polls
+          if (!foundRankings) {
+            text = `🏈 ${team.toUpperCase()} - ${year} SEASON\n\n`;
+            text += `${team.toUpperCase()} was not ranked in the final ${year} polls.\n\n`;
+            text += `This typically means the team finished with a losing record or just outside the Top 25.`;
+          }
           
           return res.json({
             jsonrpc: '2.0',
