@@ -436,7 +436,7 @@ app.all('/mcp', async (req, res) => {
         }
       }
       
-      // TOOL 4: Get Recruiting
+      // TOOL 4: Get Recruiting ✅ UPDATED WITH NO-DATA HANDLING
       if (name === 'get_recruiting') {
         const recruitYear = args.year || 2025;
         const url = `https://api.collegefootballdata.com/recruiting/teams?team=${team}&year=${recruitYear}`;
@@ -458,19 +458,41 @@ app.all('/mcp', async (req, res) => {
           
           const data = await response.json();
           
+          // STEP 1: No data at all
           if (!data || data.length === 0) {
             return res.json({
               jsonrpc: '2.0',
-              result: { content: [{ type: 'text', text: `No recruiting data found for ${team} in ${recruitYear}` }] },
+              result: { 
+                content: [{ 
+                  type: 'text', 
+                  text: `Recruiting rankings for ${recruitYear} are not yet available.\n\nRecruiting data is typically published 1-2 years in advance. Current data includes:\n• 2025 class (signed)\n• 2026 class (commitments)\n• 2027 class (early commitments)\n\nTry asking about a more recent class!` 
+                }] 
+              },
               id
             });
           }
           
-          const recruiting = data[0] || {};
+          const recruiting = data[0];
+          
+          // STEP 2: Data exists but empty for this team
+          if (!recruiting || (!recruiting.rank && !recruiting.points)) {
+            return res.json({
+              jsonrpc: '2.0',
+              result: { 
+                content: [{ 
+                  type: 'text', 
+                  text: `Recruiting data exists for ${recruitYear}, but ${team.toUpperCase()} doesn't appear in the rankings. This could mean:\n• The team didn't have a ranked recruiting class that year\n• Team name variation issue\n• Data wasn't tracked for all teams that year` 
+                }] 
+              },
+              id
+            });
+          }
+          
+          // STEP 3: Format normal response
           let text = `🏈 ${team.toUpperCase()} RECRUITING - ${recruitYear}\n\n`;
           
           if (recruiting.rank) text += `National Rank: #${recruiting.rank}\n`;
-          if (recruiting.points) text += `Points: ${recruiting.points}\n`;
+          if (recruiting.points) text += `Points: ${recruiting.points.toFixed(2)}\n`;
           
           return res.json({
             jsonrpc: '2.0',
@@ -730,7 +752,7 @@ app.all('/mcp', async (req, res) => {
         }
       }
       
-      // TOOL 9: Get Team Talent
+      // TOOL 9: Get Team Talent ✅ UPDATED WITH NO-DATA HANDLING
       if (name === 'get_team_talent') {
         const url = `https://api.collegefootballdata.com/talent?year=${year}`;
         console.log(`  Fetching: ${url}`);
@@ -751,24 +773,37 @@ app.all('/mcp', async (req, res) => {
           
           const data = await response.json();
           
+          // STEP 1: No data at all
           if (!data || data.length === 0) {
             return res.json({
               jsonrpc: '2.0',
-              result: { content: [{ type: 'text', text: `No talent data found for ${year}` }] },
+              result: { 
+                content: [{ 
+                  type: 'text', 
+                  text: `Talent composite data is not available for ${year}.\n\nThis metric was introduced in 2015. Data is available for years 2015-present.\n\nTry asking about a year from 2015 onwards!` 
+                }] 
+              },
               id
             });
           }
           
           const teamTalent = data.find(t => t.school?.toLowerCase() === team);
           
-          if (!teamTalent) {
+          // STEP 2: Data exists but empty for this team
+          if (!teamTalent || !teamTalent.talent) {
             return res.json({
               jsonrpc: '2.0',
-              result: { content: [{ type: 'text', text: `No talent data found for ${team} in ${year}` }] },
+              result: { 
+                content: [{ 
+                  type: 'text', 
+                  text: `Talent rankings exist for ${year}, but ${team.toUpperCase()} is not included. This could mean:\n• The team was not in FBS that year\n• Team name mismatch\n• Data collection issues for that specific team` 
+                }] 
+              },
               id
             });
           }
           
+          // STEP 3: Format normal response
           let text = `🏈 ${team.toUpperCase()} TALENT COMPOSITE - ${year}\n\n`;
           text += `Talent Rank: ${teamTalent.talent}\n`;
           
@@ -908,7 +943,7 @@ app.all('/mcp', async (req, res) => {
         }
       }
       
-      // TOOL 12: Get Returning Production
+      // TOOL 12: Get Returning Production ✅ UPDATED WITH NO-DATA HANDLING
       if (name === 'get_returning_production') {
         const url = `https://api.collegefootballdata.com/player/returning?team=${team}&year=${year}`;
         console.log(`  Fetching: ${url}`);
@@ -929,15 +964,37 @@ app.all('/mcp', async (req, res) => {
           
           const data = await response.json();
           
+          // STEP 1: No data at all
           if (!data || data.length === 0) {
             return res.json({
               jsonrpc: '2.0',
-              result: { content: [{ type: 'text', text: `No returning production data found for ${team} in ${year}` }] },
+              result: { 
+                content: [{ 
+                  type: 'text', 
+                  text: `No returning production data found for ${team.toUpperCase()} in ${year}.\n\nThis metric is only available for recent years (typically 2015-present).\n\nTry asking about a more recent season!` 
+                }] 
+              },
               id
             });
           }
           
-          const production = data[0] || {};
+          const production = data[0];
+          
+          // STEP 2: Data exists but empty for this team
+          if (!production || (production.passingUsage === undefined && production.rushingUsage === undefined && production.receivingUsage === undefined)) {
+            return res.json({
+              jsonrpc: '2.0',
+              result: { 
+                content: [{ 
+                  type: 'text', 
+                  text: `Returning production data exists for ${year}, but ${team.toUpperCase()} has no recorded percentages. This data can be spotty for some teams and years.\n\nTry asking about the previous or next season!` 
+                }] 
+              },
+              id
+            });
+          }
+          
+          // STEP 3: Format normal response
           let text = `🏈 ${team.toUpperCase()} RETURNING PRODUCTION - ${year}\n\n`;
           
           if (production.passingUsage !== undefined) {
