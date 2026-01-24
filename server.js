@@ -464,10 +464,136 @@ app.all('/mcp', async (req, res) => {
         }
       }
       
-      // TOOL 3: Get Game Stats
+      // TOOL 3: Get Game Stats - Now supports specific game queries
       if (name === 'get_game_stats') {
-        const url = `https://api.collegefootballdata.com/games?team=${team}&year=${year}`;
-        console.log(`  Fetching: ${url}`);
+        // Check if asking about specific opponent
+        const opponent = args.opponent || null;
+        
+        if (opponent) {
+          // Get specific game stats
+          const gamesUrl = `https://api.collegefootballdata.com/games?team=${team}&year=${year}`;
+          console.log(`  Fetching games: ${gamesUrl}`);
+          
+          try {
+            const gamesResponse = await fetch(gamesUrl, {
+              headers: { Authorization: `Bearer ${CFBD_API_KEY}` },
+              signal: AbortSignal.timeout(10000)
+            });
+            
+            if (!gamesResponse.ok) {
+              return res.json({
+                jsonrpc: '2.0',
+                result: { content: [{ type: 'text', text: `CFBD API error: ${gamesResponse.status}` }] },
+                id
+              });
+            }
+            
+            const games = await gamesResponse.json();
+            
+            // Find the specific game
+            const game = games.find(g => 
+              g.homeTeam?.toLowerCase().includes(opponent.toLowerCase()) || 
+              g.awayTeam?.toLowerCase().includes(opponent.toLowerCase())
+            );
+            
+            if (!game) {
+              return res.json({
+                jsonrpc: '2.0',
+                result: { content: [{ type: 'text', text: `No game found between ${team.toUpperCase()} and ${opponent} in ${year}` }] },
+                id
+              });
+            }
+            
+            // Now fetch detailed team stats for this game
+            const statsUrl = `https://api.collegefootballdata.com/games/teams?gameId=${game.id}`;
+            console.log(`  Fetching game stats: ${statsUrl}`);
+            
+            const statsResponse = await fetch(statsUrl, {
+              headers: { Authorization: `Bearer ${CFBD_API_KEY}` },
+              signal: AbortSignal.timeout(10000)
+            });
+            
+            if (!statsResponse.ok) {
+              return res.json({
+                jsonrpc: '2.0',
+                result: { content: [{ type: 'text', text: `Could not fetch detailed stats for this game` }] },
+                id
+              });
+            }
+            
+            const teamStats = await statsResponse.json();
+            
+            if (!teamStats || teamStats.length === 0) {
+              return res.json({
+                jsonrpc: '2.0',
+                result: { content: [{ type: 'text', text: `No detailed stats available for this game` }] },
+                id
+              });
+            }
+            
+            // Find OU's stats
+            const ouStats = teamStats.find(t => t.school?.toLowerCase() === team.toLowerCase());
+            const oppStats = teamStats.find(t => t.school?.toLowerCase() !== team.toLowerCase());
+            
+            if (!ouStats) {
+              return res.json({
+                jsonrpc: '2.0',
+                result: { content: [{ type: 'text', text: `Stats not found for ${team.toUpperCase()} in this game` }] },
+                id
+              });
+            }
+            
+            const isHome = game.homeTeam?.toLowerCase() === team.toLowerCase();
+            const teamScore = isHome ? game.homePoints : game.awayPoints;
+            const oppScore = isHome ? game.awayPoints : game.homePoints;
+            const result = teamScore > oppScore ? 'W' : 'L';
+            
+            let text = `🏈 ${team.toUpperCase()} vs ${opponent.toUpperCase()} - ${year}\n`;
+            text += `Result: ${result} ${teamScore}-${oppScore}\n\n`;
+            
+            text += `${team.toUpperCase()} STATS:\n`;
+            if (ouStats.stats) {
+              ouStats.stats.forEach(stat => {
+                if (stat.category === 'totalYards') text += `Total Yards: ${stat.stat}\n`;
+                else if (stat.category === 'netPassingYards') text += `Passing Yards: ${stat.stat}\n`;
+                else if (stat.category === 'rushingYards') text += `Rushing Yards: ${stat.stat}\n`;
+                else if (stat.category === 'turnovers') text += `Turnovers: ${stat.stat}\n`;
+                else if (stat.category === 'firstDowns') text += `First Downs: ${stat.stat}\n`;
+                else if (stat.category === 'thirdDownEff') text += `Third Down: ${stat.stat}\n`;
+                else if (stat.category === 'fumblesLost') text += `Fumbles Lost: ${stat.stat}\n`;
+                else if (stat.category === 'interceptions') text += `Interceptions: ${stat.stat}\n`;
+              });
+            }
+            
+            if (oppStats && oppStats.stats) {
+              text += `\n${opponent.toUpperCase()} STATS:\n`;
+              oppStats.stats.forEach(stat => {
+                if (stat.category === 'totalYards') text += `Total Yards: ${stat.stat}\n`;
+                else if (stat.category === 'netPassingYards') text += `Passing Yards: ${stat.stat}\n`;
+                else if (stat.category === 'rushingYards') text += `Rushing Yards: ${stat.stat}\n`;
+                else if (stat.category === 'turnovers') text += `Turnovers: ${stat.stat}\n`;
+                else if (stat.category === 'firstDowns') text += `First Downs: ${stat.stat}\n`;
+              });
+            }
+            
+            return res.json({
+              jsonrpc: '2.0',
+              result: { content: [{ type: 'text', text }] },
+              id
+            });
+            
+          } catch (err) {
+            console.error('  Error:', err.message);
+            return res.json({
+              jsonrpc: '2.0',
+              result: { content: [{ type: 'text', text: `Error: ${err.message}` }] },
+              id
+            });
+          }
+        } else {
+          // Show all games (game-by-game scores)
+          const url = `https://api.collegefootballdata.com/games?team=${team}&year=${year}`;
+          console.log(`  Fetching: ${url}`);
         
         try {
           const response = await fetch(url, {
