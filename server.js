@@ -418,8 +418,6 @@ app.all('/mcp', async (req, res) => {
           
           const data = await response.json();
           
-          console.log(`  DEBUG - Team stats response:`, JSON.stringify(data, null, 2).substring(0, 600));
-          
           if (!data || data.length === 0) {
             return res.json({
               jsonrpc: '2.0',
@@ -428,15 +426,27 @@ app.all('/mcp', async (req, res) => {
             });
           }
           
-          const stats = data[0] || {};
+          // Convert array of {statName, statValue} to object
+          const statsObj = {};
+          data.forEach(stat => {
+            if (stat.statName && stat.statValue !== undefined) {
+              statsObj[stat.statName] = stat.statValue;
+            }
+          });
+          
           let text = `🏈 ${team.toUpperCase()} TEAM STATS - ${year}\n\n`;
           
-          if (stats.games) text += `Games: ${stats.games}\n`;
-          if (stats.totalYards) text += `Total Yards: ${stats.totalYards}\n`;
-          if (stats.netPassingYards) text += `Passing Yards: ${stats.netPassingYards}\n`;
-          if (stats.rushingYards) text += `Rushing Yards: ${stats.rushingYards}\n`;
-          if (stats.totalTDs) text += `Total TDs: ${stats.totalTDs}\n`;
-          if (stats.turnovers) text += `Turnovers: ${stats.turnovers}\n`;
+          if (statsObj.games) text += `Games: ${statsObj.games}\n`;
+          if (statsObj.totalYards) text += `Total Yards: ${statsObj.totalYards}\n`;
+          if (statsObj.netPassingYards) text += `Passing Yards: ${statsObj.netPassingYards}\n`;
+          if (statsObj.rushingYards) text += `Rushing Yards: ${statsObj.rushingYards}\n`;
+          if (statsObj.passCompletions && statsObj.passAttempts) {
+            text += `Pass Completion: ${statsObj.passCompletions}/${statsObj.passAttempts}\n`;
+          }
+          if (statsObj.firstDowns) text += `First Downs: ${statsObj.firstDowns}\n`;
+          if (statsObj.turnovers) text += `Turnovers: ${statsObj.turnovers}\n`;
+          if (statsObj.fumblesLost) text += `Fumbles Lost: ${statsObj.fumblesLost}\n`;
+          if (statsObj.interceptions) text += `Interceptions Thrown: ${statsObj.interceptions}\n`;
           
           return res.json({
             jsonrpc: '2.0',
@@ -615,11 +625,6 @@ app.all('/mcp', async (req, res) => {
           
           const data = await response.json();
           
-          console.log(`  DEBUG - Schedule data length:`, data?.length);
-          if (data && data.length > 0) {
-            console.log(`  DEBUG - First game:`, JSON.stringify(data[0], null, 2).substring(0, 400));
-          }
-          
           if (!data || data.length === 0) {
             return res.json({
               jsonrpc: '2.0',
@@ -631,11 +636,21 @@ app.all('/mcp', async (req, res) => {
           let text = `🏈 ${team.toUpperCase()} SCHEDULE - ${year}\n\n`;
           
           data.forEach(game => {
-            const isHome = game.home_team?.toLowerCase() === team;
-            const opponent = isHome ? game.away_team : game.home_team;
+            const isHome = game.homeTeam?.toLowerCase() === team.toLowerCase();
+            const opponent = isHome ? game.awayTeam : game.homeTeam;
             const location = isHome ? 'vs' : '@';
             
-            text += `Week ${game.week}: ${location} ${opponent}\n`;
+            text += `Week ${game.week}: ${location} ${opponent}`;
+            
+            // Add score if game is completed
+            if (game.completed) {
+              const teamScore = isHome ? game.homePoints : game.awayPoints;
+              const oppScore = isHome ? game.awayPoints : game.homePoints;
+              const result = teamScore > oppScore ? 'W' : (teamScore < oppScore ? 'L' : 'T');
+              text += ` - ${result} ${teamScore}-${oppScore}`;
+            }
+            
+            text += `\n`;
           });
           
           return res.json({
@@ -1230,5 +1245,6 @@ setInterval(() => {
   fetch(`http://localhost:${PORT}/health`).catch(() => {});
   console.log(`💓 Alive: ${Math.floor(process.uptime())}s`);
 }, 30000);
+
 
 
