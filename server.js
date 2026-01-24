@@ -654,7 +654,8 @@ app.all('/mcp', async (req, res) => {
             id
           });
         }
-      }
+        }  // Close the else block
+      }  // Close the if (name === 'get_game_stats') block
       
       // TOOL 4: Get Recruiting ✅ UPDATED WITH NO-DATA HANDLING
       if (name === 'get_recruiting') {
