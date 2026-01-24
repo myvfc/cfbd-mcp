@@ -893,7 +893,7 @@ app.all('/mcp', async (req, res) => {
           console.log(`  DEBUG - Talent data length:`, data?.length);
           if (data && data.length > 0) {
             console.log(`  DEBUG - First talent entry:`, JSON.stringify(data[0], null, 2).substring(0, 300));
-            const ouEntry = data.find(t => t.school?.toLowerCase() === team);
+            const ouEntry = data.find(t => t.school?.toLowerCase() === team.toLowerCase() || t.team?.toLowerCase() === team.toLowerCase());
             console.log(`  DEBUG - OU talent entry:`, JSON.stringify(ouEntry, null, 2));
           }
           
@@ -911,7 +911,7 @@ app.all('/mcp', async (req, res) => {
             });
           }
           
-          const teamTalent = data.find(t => t.school?.toLowerCase() === team);
+          const teamTalent = data.find(t => t.school?.toLowerCase() === team.toLowerCase() || t.team?.toLowerCase() === team.toLowerCase());
           
           // STEP 2: Data exists but empty for this team
           if (!teamTalent || !teamTalent.talent) {
