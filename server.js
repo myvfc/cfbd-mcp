@@ -418,6 +418,8 @@ app.all('/mcp', async (req, res) => {
           
           const data = await response.json();
           
+          console.log(`  DEBUG - Team stats response:`, JSON.stringify(data, null, 2).substring(0, 600));
+          
           if (!data || data.length === 0) {
             return res.json({
               jsonrpc: '2.0',
@@ -612,6 +614,11 @@ app.all('/mcp', async (req, res) => {
           }
           
           const data = await response.json();
+          
+          console.log(`  DEBUG - Schedule data length:`, data?.length);
+          if (data && data.length > 0) {
+            console.log(`  DEBUG - First game:`, JSON.stringify(data[0], null, 2).substring(0, 400));
+          }
           
           if (!data || data.length === 0) {
             return res.json({
