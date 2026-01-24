@@ -496,19 +496,19 @@ app.all('/mcp', async (req, res) => {
           let text = `🏈 ${team.toUpperCase()} GAME-BY-GAME - ${year}\n\n`;
           
           data.forEach(game => {
-            const isHome = game.home_team?.toLowerCase() === team;
-            const opponent = isHome ? game.away_team : game.home_team;
-            const teamScore = isHome ? game.home_points : game.away_points;
-            const oppScore = isHome ? game.away_points : game.home_points;
+            const isHome = game.homeTeam?.toLowerCase() === team.toLowerCase();
+            const opponent = isHome ? game.awayTeam : game.homeTeam;
+            const teamScore = isHome ? game.homePoints : game.awayPoints;
+            const oppScore = isHome ? game.awayPoints : game.homePoints;
             const result = teamScore > oppScore ? 'W' : teamScore < oppScore ? 'L' : 'T';
             
             text += `Week ${game.week}: ${result} vs ${opponent} ${teamScore}-${oppScore}\n`;
           });
           
           const wins = data.filter(g => {
-            const isHome = g.home_team?.toLowerCase() === team;
-            const teamScore = isHome ? g.home_points : g.away_points;
-            const oppScore = isHome ? g.away_points : g.home_points;
+            const isHome = g.homeTeam?.toLowerCase() === team.toLowerCase();
+            const teamScore = isHome ? g.homePoints : g.awayPoints;
+            const oppScore = isHome ? g.awayPoints : g.homePoints;
             return teamScore > oppScore;
           }).length;
           
@@ -754,6 +754,8 @@ app.all('/mcp', async (req, res) => {
           
           const data = await response.json();
           
+          console.log(`  DEBUG - Standings response:`, JSON.stringify(data, null, 2).substring(0, 600));
+          
           if (!data || data.length === 0) {
             return res.json({
               jsonrpc: '2.0',
@@ -887,6 +889,13 @@ app.all('/mcp', async (req, res) => {
           }
           
           const data = await response.json();
+          
+          console.log(`  DEBUG - Talent data length:`, data?.length);
+          if (data && data.length > 0) {
+            console.log(`  DEBUG - First talent entry:`, JSON.stringify(data[0], null, 2).substring(0, 300));
+            const ouEntry = data.find(t => t.school?.toLowerCase() === team);
+            console.log(`  DEBUG - OU talent entry:`, JSON.stringify(ouEntry, null, 2));
+          }
           
           // STEP 1: No data at all
           if (!data || data.length === 0) {
@@ -1078,6 +1087,8 @@ app.all('/mcp', async (req, res) => {
           }
           
           const data = await response.json();
+          
+          console.log(`  DEBUG - Returning production response:`, JSON.stringify(data, null, 2).substring(0, 600));
           
           // STEP 1: No data at all
           if (!data || data.length === 0) {
