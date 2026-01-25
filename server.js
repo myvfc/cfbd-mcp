@@ -513,15 +513,21 @@ app.all('/mcp', async (req, res) => {
               signal: AbortSignal.timeout(10000)
             });
             
+            console.log(`  DEBUG - Stats response status: ${statsResponse.status}, ok: ${statsResponse.ok}`);
+            
             if (!statsResponse.ok) {
+              console.log(`  DEBUG - Stats API returned error status ${statsResponse.status}`);
               return res.json({
                 jsonrpc: '2.0',
-                result: { content: [{ type: 'text', text: `Could not fetch detailed stats for this game` }] },
+                result: { content: [{ type: 'text', text: `Could not fetch detailed stats for this game (API status: ${statsResponse.status})` }] },
                 id
               });
             }
             
             const teamStats = await statsResponse.json();
+            
+            console.log(`  DEBUG - Team stats type:`, typeof teamStats, Array.isArray(teamStats));
+            console.log(`  DEBUG - Team stats response:`, JSON.stringify(teamStats, null, 2).substring(0, 1000));
             
             if (!teamStats || teamStats.length === 0) {
               return res.json({
@@ -1383,6 +1389,5 @@ setInterval(() => {
   fetch(`http://localhost:${PORT}/health`).catch(() => {});
   console.log(`💓 Alive: ${Math.floor(process.uptime())}s`);
 }, 30000);
-
 
 
