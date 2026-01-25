@@ -505,7 +505,7 @@ app.all('/mcp', async (req, res) => {
             }
             
             // Now fetch detailed team stats for this game
-            const statsUrl = `https://api.collegefootballdata.com/games/teams?gameId=${game.id}`;
+            const statsUrl = `https://api.collegefootballdata.com/stats/game/teams?gameId=${game.id}`;
             console.log(`  Fetching game stats: ${statsUrl}`);
             
             const statsResponse = await fetch(statsUrl, {
