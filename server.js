@@ -524,7 +524,21 @@ app.all('/mcp', async (req, res) => {
               });
             }
             
-            const teamStats = await statsResponse.json();
+            const rawText = await statsResponse.text();
+            console.log(`  DEBUG - Raw response (first 500 chars):`, rawText.substring(0, 500));
+            
+            let teamStats;
+            try {
+              teamStats = JSON.parse(rawText);
+            } catch (parseErr) {
+              console.log(`  DEBUG - JSON parse error:`, parseErr.message);
+              console.log(`  DEBUG - Response was HTML/text, not JSON`);
+              return res.json({
+                jsonrpc: '2.0',
+                result: { content: [{ type: 'text', text: `Detailed game stats not available for this matchup (API returned non-JSON response)` }] },
+                id
+              });
+            }
             
             console.log(`  DEBUG - Team stats type:`, typeof teamStats, Array.isArray(teamStats));
             console.log(`  DEBUG - Team stats response:`, JSON.stringify(teamStats, null, 2).substring(0, 1000));
@@ -1389,6 +1403,7 @@ setInterval(() => {
   fetch(`http://localhost:${PORT}/health`).catch(() => {});
   console.log(`💓 Alive: ${Math.floor(process.uptime())}s`);
 }, 30000);
+
 
 
 
