@@ -818,7 +818,26 @@ app.all('/mcp', async (req, res) => {
             });
           }
           
-          const data = await response.json();
+          const rawText = await response.text();
+          console.log(`  DEBUG - Standings raw response (first 500 chars):`, rawText.substring(0, 500));
+          
+          let data;
+          try {
+            data = JSON.parse(rawText);
+          } catch (parseErr) {
+            console.log(`  DEBUG - Standings JSON parse error:`, parseErr.message);
+            console.log(`  DEBUG - Endpoint returned HTML/text, not JSON`);
+            return res.json({
+              jsonrpc: '2.0',
+              result: { 
+                content: [{ 
+                  type: 'text', 
+                  text: `Conference standings are not available from the data source. The CFBD API doesn't support this endpoint.\n\nTry asking for:\n• "OU final ranking ${standingsYear}"\n• "OU schedule ${standingsYear}" for game-by-game results\n• "OU team stats ${standingsYear}"` 
+                }] 
+              },
+              id
+            });
+          }
           
           console.log(`  DEBUG - Standings response:`, JSON.stringify(data, null, 2).substring(0, 600));
           
@@ -1322,6 +1341,7 @@ setInterval(() => {
   fetch(`http://localhost:${PORT}/health`).catch(() => {});
   console.log(`💓 Alive: ${Math.floor(process.uptime())}s`);
 }, 30000);
+
 
 
 
