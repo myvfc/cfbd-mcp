@@ -464,13 +464,13 @@ app.all('/mcp', async (req, res) => {
         }
       }
       
-      // TOOL 3: Get Game Stats - Now supports specific game queries
+      // TOOL 3: Get Game Stats - Shows game scores, detailed per-game stats not available from API
       if (name === 'get_game_stats') {
         // Check if asking about specific opponent
         const opponent = args.opponent || null;
         
         if (opponent) {
-          // Get specific game stats
+          // Get specific game score
           const gamesUrl = `https://api.collegefootballdata.com/games?team=${team}&year=${year}`;
           console.log(`  Fetching games: ${gamesUrl}`);
           
@@ -504,97 +504,16 @@ app.all('/mcp', async (req, res) => {
               });
             }
             
-            // Now fetch detailed team stats for this game
-            const statsUrl = `https://api.collegefootballdata.com/stats/game/teams?gameId=${game.id}`;
-            console.log(`  Fetching game stats: ${statsUrl}`);
-            
-            const statsResponse = await fetch(statsUrl, {
-              headers: { Authorization: `Bearer ${CFBD_API_KEY}` },
-              signal: AbortSignal.timeout(10000)
-            });
-            
-            console.log(`  DEBUG - Stats response status: ${statsResponse.status}, ok: ${statsResponse.ok}`);
-            
-            if (!statsResponse.ok) {
-              console.log(`  DEBUG - Stats API returned error status ${statsResponse.status}`);
-              return res.json({
-                jsonrpc: '2.0',
-                result: { content: [{ type: 'text', text: `Could not fetch detailed stats for this game (API status: ${statsResponse.status})` }] },
-                id
-              });
-            }
-            
-            const rawText = await statsResponse.text();
-            console.log(`  DEBUG - Raw response (first 500 chars):`, rawText.substring(0, 500));
-            
-            let teamStats;
-            try {
-              teamStats = JSON.parse(rawText);
-            } catch (parseErr) {
-              console.log(`  DEBUG - JSON parse error:`, parseErr.message);
-              console.log(`  DEBUG - Response was HTML/text, not JSON`);
-              return res.json({
-                jsonrpc: '2.0',
-                result: { content: [{ type: 'text', text: `Detailed game stats not available for this matchup (API returned non-JSON response)` }] },
-                id
-              });
-            }
-            
-            console.log(`  DEBUG - Team stats type:`, typeof teamStats, Array.isArray(teamStats));
-            console.log(`  DEBUG - Team stats response:`, JSON.stringify(teamStats, null, 2).substring(0, 1000));
-            
-            if (!teamStats || teamStats.length === 0) {
-              return res.json({
-                jsonrpc: '2.0',
-                result: { content: [{ type: 'text', text: `No detailed stats available for this game` }] },
-                id
-              });
-            }
-            
-            // Find OU's stats
-            const ouStats = teamStats.find(t => t.school?.toLowerCase() === team.toLowerCase());
-            const oppStats = teamStats.find(t => t.school?.toLowerCase() !== team.toLowerCase());
-            
-            if (!ouStats) {
-              return res.json({
-                jsonrpc: '2.0',
-                result: { content: [{ type: 'text', text: `Stats not found for ${team.toUpperCase()} in this game` }] },
-                id
-              });
-            }
-            
             const isHome = game.homeTeam?.toLowerCase() === team.toLowerCase();
             const teamScore = isHome ? game.homePoints : game.awayPoints;
             const oppScore = isHome ? game.awayPoints : game.homePoints;
             const result = teamScore > oppScore ? 'W' : 'L';
             
-            let text = `🏈 ${team.toUpperCase()} vs ${opponent.toUpperCase()} - ${year}\n`;
+            let text = `🏈 ${team.toUpperCase()} vs ${opponent.toUpperCase()} - Week ${game.week}, ${year}\n\n`;
             text += `Result: ${result} ${teamScore}-${oppScore}\n\n`;
-            
-            text += `${team.toUpperCase()} STATS:\n`;
-            if (ouStats.stats) {
-              ouStats.stats.forEach(stat => {
-                if (stat.category === 'totalYards') text += `Total Yards: ${stat.stat}\n`;
-                else if (stat.category === 'netPassingYards') text += `Passing Yards: ${stat.stat}\n`;
-                else if (stat.category === 'rushingYards') text += `Rushing Yards: ${stat.stat}\n`;
-                else if (stat.category === 'turnovers') text += `Turnovers: ${stat.stat}\n`;
-                else if (stat.category === 'firstDowns') text += `First Downs: ${stat.stat}\n`;
-                else if (stat.category === 'thirdDownEff') text += `Third Down: ${stat.stat}\n`;
-                else if (stat.category === 'fumblesLost') text += `Fumbles Lost: ${stat.stat}\n`;
-                else if (stat.category === 'interceptions') text += `Interceptions: ${stat.stat}\n`;
-              });
-            }
-            
-            if (oppStats && oppStats.stats) {
-              text += `\n${opponent.toUpperCase()} STATS:\n`;
-              oppStats.stats.forEach(stat => {
-                if (stat.category === 'totalYards') text += `Total Yards: ${stat.stat}\n`;
-                else if (stat.category === 'netPassingYards') text += `Passing Yards: ${stat.stat}\n`;
-                else if (stat.category === 'rushingYards') text += `Rushing Yards: ${stat.stat}\n`;
-                else if (stat.category === 'turnovers') text += `Turnovers: ${stat.stat}\n`;
-                else if (stat.category === 'firstDowns') text += `First Downs: ${stat.stat}\n`;
-              });
-            }
+            text += `Note: For detailed game statistics (yards, turnovers, etc.), try asking for:\n`;
+            text += `• "OU team stats ${year}" for season totals\n`;
+            text += `• "[Player name] stats" for individual player stats`;
             
             return res.json({
               jsonrpc: '2.0',
@@ -1403,6 +1322,7 @@ setInterval(() => {
   fetch(`http://localhost:${PORT}/health`).catch(() => {});
   console.log(`💓 Alive: ${Math.floor(process.uptime())}s`);
 }, 30000);
+
 
 
 
