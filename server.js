@@ -69,7 +69,7 @@ app.all('/mcp', async (req, res) => {
                 type: 'object',
                 properties: {
                   team: { type: 'string', description: 'Team name (e.g., "oklahoma")' },
-                  year: { type: 'number', description: 'Season year (default: 2024)' }
+                  year: { type: 'number', description: 'Season year (default: 2025)' }
                 },
                 required: ['team']
               }
@@ -81,7 +81,7 @@ app.all('/mcp', async (req, res) => {
                 type: 'object',
                 properties: {
                   team: { type: 'string', description: 'Team name (e.g., "oklahoma")' },
-                  year: { type: 'number', description: 'Season year (default: 2024)' }
+                  year: { type: 'number', description: 'Season year (default: 2025)' }
                 },
                 required: ['team']
               }
@@ -93,7 +93,7 @@ app.all('/mcp', async (req, res) => {
                 type: 'object',
                 properties: {
                   team: { type: 'string', description: 'Team name (e.g., "oklahoma")' },
-                  year: { type: 'number', description: 'Season year (default: 2024)' }
+                  year: { type: 'number', description: 'Season year (default: 2025)' }
                 },
                 required: ['team']
               }
@@ -105,7 +105,7 @@ app.all('/mcp', async (req, res) => {
                 type: 'object',
                 properties: {
                   team: { type: 'string', description: 'Team name (e.g., "oklahoma")' },
-                  year: { type: 'number', description: 'Recruiting year (default: 2025)' }
+                  year: { type: 'number', description: 'Recruiting year (default: 2026)' }
                 },
                 required: ['team']
               }
@@ -117,7 +117,7 @@ app.all('/mcp', async (req, res) => {
                 type: 'object',
                 properties: {
                   team: { type: 'string', description: 'Team name (e.g., "oklahoma")' },
-                  year: { type: 'number', description: 'Season year (default: 2024)' }
+                  year: { type: 'number', description: 'Season year (default: 2025)' }
                 },
                 required: ['team']
               }
@@ -140,7 +140,7 @@ app.all('/mcp', async (req, res) => {
                 type: 'object',
                 properties: {
                   conference: { type: 'string', description: 'Conference abbreviation (e.g., "SEC", "Big 12")' },
-                  year: { type: 'number', description: 'Season year (default: 2024)' }
+                  year: { type: 'number', description: 'Season year (default: 2025)' }
                 },
                 required: ['conference']
               }
@@ -152,7 +152,7 @@ app.all('/mcp', async (req, res) => {
                 type: 'object',
                 properties: {
                   team: { type: 'string', description: 'Team name (e.g., "oklahoma")' },
-                  year: { type: 'number', description: 'Season year (default: 2024)' }
+                  year: { type: 'number', description: 'Season year (default: 2025)' }
                 },
                 required: ['team']
               }
@@ -164,7 +164,7 @@ app.all('/mcp', async (req, res) => {
                 type: 'object',
                 properties: {
                   team: { type: 'string', description: 'Team name (e.g., "oklahoma")' },
-                  year: { type: 'number', description: 'Season year (default: 2024)' }
+                  year: { type: 'number', description: 'Season year (default: 2025)' }
                 },
                 required: ['team']
               }
@@ -176,8 +176,8 @@ app.all('/mcp', async (req, res) => {
                 type: 'object',
                 properties: {
                   team: { type: 'string', description: 'Team name (e.g., "oklahoma")' },
-                  startYear: { type: 'number', description: 'Start year (default: 2020)' },
-                  endYear: { type: 'number', description: 'End year (default: 2024)' }
+                  startYear: { type: 'number', description: 'Start year (default: 2021)' },
+                  endYear: { type: 'number', description: 'End year (default: 2025)' }
                 },
                 required: ['team']
               }
@@ -200,7 +200,7 @@ app.all('/mcp', async (req, res) => {
                 type: 'object',
                 properties: {
                   team: { type: 'string', description: 'Team name (e.g., "oklahoma")' },
-                  year: { type: 'number', description: 'Season year (default: 2024)' }
+                  year: { type: 'number', description: 'Season year (default: 2025)' }
                 },
                 required: ['team']
               }
@@ -238,9 +238,10 @@ app.all('/mcp', async (req, res) => {
       }
       
       const team = (args.team || 'oklahoma').toLowerCase();
-      const year = args.year || 2024;
+      // CHANGE 1: Updated default year from 2024 to 2025
+      const year = args.year || 2025;
       
-      // TOOL 1: Get Player Stats ✅ UPDATED WITH PLAYER NAME FILTERING
+      // TOOL 1: Get Player Stats
       if (name === 'get_player_stats') {
         const url = `https://api.collegefootballdata.com/stats/player/season?team=${team}&year=${year}`;
         console.log(`  Fetching: ${url}`);
@@ -272,7 +273,6 @@ app.all('/mcp', async (req, res) => {
           // Extract player name from query if provided
           let playerName = null;
           if (args.query) {
-            // Look for capitalized names: "John Mateer", "Dillon Gabriel", etc.
             const nameMatch = args.query.match(/\b([A-Z][a-z]+(?:\s+[A-Z][a-z']+)+)\b/);
             if (nameMatch) {
               playerName = nameMatch[1].trim();
@@ -322,7 +322,6 @@ app.all('/mcp', async (req, res) => {
           
           let text = `🏈 ${team.toUpperCase()} PLAYER STATS - ${year}\n\n`;
           
-          // If searching for specific player, show detailed stats
           if (playerName && Object.keys(playerStats).length === 1) {
             const player = Object.keys(playerStats)[0];
             text = `🏈 ${player.toUpperCase()} - ${year}\n\n`;
@@ -352,7 +351,6 @@ app.all('/mcp', async (req, res) => {
               });
             }
           } else {
-            // Show top players by category
             const passingLeaders = data.filter(p => p.category === 'passing' && p.statType === 'YDS').slice(0, 5);
             const rushingLeaders = data.filter(p => p.category === 'rushing' && p.statType === 'YDS').slice(0, 5);
             const receivingLeaders = data.filter(p => p.category === 'receiving' && p.statType === 'YDS').slice(0, 5);
@@ -426,7 +424,6 @@ app.all('/mcp', async (req, res) => {
             });
           }
           
-          // Convert array of {statName, statValue} to object
           const statsObj = {};
           data.forEach(stat => {
             if (stat.statName && stat.statValue !== undefined) {
@@ -464,13 +461,11 @@ app.all('/mcp', async (req, res) => {
         }
       }
       
-      // TOOL 3: Get Game Stats - Shows game scores, detailed per-game stats not available from API
+      // TOOL 3: Get Game Stats
       if (name === 'get_game_stats') {
-        // Check if asking about specific opponent
         const opponent = args.opponent || null;
         
         if (opponent) {
-          // Get specific game score
           const gamesUrl = `https://api.collegefootballdata.com/games?team=${team}&year=${year}`;
           console.log(`  Fetching games: ${gamesUrl}`);
           
@@ -490,7 +485,6 @@ app.all('/mcp', async (req, res) => {
             
             const games = await gamesResponse.json();
             
-            // Find the specific game
             const game = games.find(g => 
               g.homeTeam?.toLowerCase().includes(opponent.toLowerCase()) || 
               g.awayTeam?.toLowerCase().includes(opponent.toLowerCase())
@@ -530,75 +524,75 @@ app.all('/mcp', async (req, res) => {
             });
           }
         } else {
-          // Show all games (game-by-game scores)
           const url = `https://api.collegefootballdata.com/games?team=${team}&year=${year}`;
           console.log(`  Fetching: ${url}`);
         
-        try {
-          const response = await fetch(url, {
-            headers: { Authorization: `Bearer ${CFBD_API_KEY}` },
-            signal: AbortSignal.timeout(10000)
-          });
-          
-          if (!response.ok) {
-            return res.json({
-              jsonrpc: '2.0',
-              result: { content: [{ type: 'text', text: `CFBD API error: ${response.status}` }] },
-              id
+          try {
+            const response = await fetch(url, {
+              headers: { Authorization: `Bearer ${CFBD_API_KEY}` },
+              signal: AbortSignal.timeout(10000)
             });
-          }
-          
-          const data = await response.json();
-          
-          if (!data || data.length === 0) {
-            return res.json({
-              jsonrpc: '2.0',
-              result: { content: [{ type: 'text', text: `No games found for ${team} in ${year}` }] },
-              id
-            });
-          }
-          
-          let text = `🏈 ${team.toUpperCase()} GAME-BY-GAME - ${year}\n\n`;
-          
-          data.forEach(game => {
-            const isHome = game.homeTeam?.toLowerCase() === team.toLowerCase();
-            const opponent = isHome ? game.awayTeam : game.homeTeam;
-            const teamScore = isHome ? game.homePoints : game.awayPoints;
-            const oppScore = isHome ? game.awayPoints : game.homePoints;
-            const result = teamScore > oppScore ? 'W' : teamScore < oppScore ? 'L' : 'T';
             
-            text += `Week ${game.week}: ${result} vs ${opponent} ${teamScore}-${oppScore}\n`;
-          });
-          
-          const wins = data.filter(g => {
-            const isHome = g.homeTeam?.toLowerCase() === team.toLowerCase();
-            const teamScore = isHome ? g.homePoints : g.awayPoints;
-            const oppScore = isHome ? g.awayPoints : g.homePoints;
-            return teamScore > oppScore;
-          }).length;
-          
-          text += `\nRecord: ${wins}-${data.length - wins}`;
-          
-          return res.json({
-            jsonrpc: '2.0',
-            result: { content: [{ type: 'text', text }] },
-            id
-          });
-          
-        } catch (err) {
-          console.error('  Error:', err.message);
-          return res.json({
-            jsonrpc: '2.0',
-            result: { content: [{ type: 'text', text: `Error: ${err.message}` }] },
-            id
-          });
+            if (!response.ok) {
+              return res.json({
+                jsonrpc: '2.0',
+                result: { content: [{ type: 'text', text: `CFBD API error: ${response.status}` }] },
+                id
+              });
+            }
+            
+            const data = await response.json();
+            
+            if (!data || data.length === 0) {
+              return res.json({
+                jsonrpc: '2.0',
+                result: { content: [{ type: 'text', text: `No games found for ${team} in ${year}` }] },
+                id
+              });
+            }
+            
+            let text = `🏈 ${team.toUpperCase()} GAME-BY-GAME - ${year}\n\n`;
+            
+            data.forEach(game => {
+              const isHome = game.homeTeam?.toLowerCase() === team.toLowerCase();
+              const opponent = isHome ? game.awayTeam : game.homeTeam;
+              const teamScore = isHome ? game.homePoints : game.awayPoints;
+              const oppScore = isHome ? game.awayPoints : game.homePoints;
+              const result = teamScore > oppScore ? 'W' : teamScore < oppScore ? 'L' : 'T';
+              
+              text += `Week ${game.week}: ${result} vs ${opponent} ${teamScore}-${oppScore}\n`;
+            });
+            
+            const wins = data.filter(g => {
+              const isHome = g.homeTeam?.toLowerCase() === team.toLowerCase();
+              const teamScore = isHome ? g.homePoints : g.awayPoints;
+              const oppScore = isHome ? g.awayPoints : g.homePoints;
+              return teamScore > oppScore;
+            }).length;
+            
+            text += `\nRecord: ${wins}-${data.length - wins}`;
+            
+            return res.json({
+              jsonrpc: '2.0',
+              result: { content: [{ type: 'text', text }] },
+              id
+            });
+            
+          } catch (err) {
+            console.error('  Error:', err.message);
+            return res.json({
+              jsonrpc: '2.0',
+              result: { content: [{ type: 'text', text: `Error: ${err.message}` }] },
+              id
+            });
+          }
         }
-        }  // Close the else block
-      }  // Close the if (name === 'get_game_stats') block
+      }
       
-      // TOOL 4: Get Recruiting ✅ UPDATED WITH NO-DATA HANDLING
+      // TOOL 4: Get Recruiting
       if (name === 'get_recruiting') {
-        const recruitYear = args.year || 2025;
+        // CHANGE 4: Updated recruiting default to 2026 (looks ahead)
+        const recruitYear = args.year || 2026;
         const url = `https://api.collegefootballdata.com/recruiting/teams?team=${team}&year=${recruitYear}`;
         console.log(`  Fetching: ${url}`);
         
@@ -618,7 +612,6 @@ app.all('/mcp', async (req, res) => {
           
           const data = await response.json();
           
-          // STEP 1: No data at all
           if (!data || data.length === 0) {
             return res.json({
               jsonrpc: '2.0',
@@ -634,7 +627,6 @@ app.all('/mcp', async (req, res) => {
           
           const recruiting = data[0];
           
-          // STEP 2: Data exists but empty for this team
           if (!recruiting || (!recruiting.rank && !recruiting.points)) {
             return res.json({
               jsonrpc: '2.0',
@@ -648,7 +640,6 @@ app.all('/mcp', async (req, res) => {
             });
           }
           
-          // STEP 3: Format normal response
           let text = `🏈 ${team.toUpperCase()} RECRUITING - ${recruitYear}\n\n`;
           
           if (recruiting.rank) text += `National Rank: #${recruiting.rank}\n`;
@@ -708,7 +699,6 @@ app.all('/mcp', async (req, res) => {
             
             text += `Week ${game.week}: ${location} ${opponent}`;
             
-            // Add score if game is completed
             if (game.completed) {
               const teamScore = isHome ? game.homePoints : game.awayPoints;
               const oppScore = isHome ? game.awayPoints : game.homePoints;
@@ -775,7 +765,6 @@ app.all('/mcp', async (req, res) => {
           
           let text = `🏈 PLAY-BY-PLAY - Game ${gameId}\n\n`;
           
-          // Show scoring plays only
           const scoringPlays = data.filter(p => p.scoringPlay);
           scoringPlays.slice(0, 20).forEach(play => {
             text += `Q${play.period} ${play.clock}: ${play.playText}\n`;
@@ -800,7 +789,7 @@ app.all('/mcp', async (req, res) => {
       // TOOL 7: Get Conference Standings
       if (name === 'get_conference_standings') {
         const conference = args.conference || 'SEC';
-        const standingsYear = args.year || 2024;
+        const standingsYear = args.year || 2025;
         const url = `https://api.collegefootballdata.com/standings?conference=${conference}&year=${standingsYear}`;
         console.log(`  Fetching: ${url}`);
         
@@ -826,7 +815,6 @@ app.all('/mcp', async (req, res) => {
             data = JSON.parse(rawText);
           } catch (parseErr) {
             console.log(`  DEBUG - Standings JSON parse error:`, parseErr.message);
-            console.log(`  DEBUG - Endpoint returned HTML/text, not JSON`);
             return res.json({
               jsonrpc: '2.0',
               result: { 
@@ -838,8 +826,6 @@ app.all('/mcp', async (req, res) => {
               id
             });
           }
-          
-          console.log(`  DEBUG - Standings response:`, JSON.stringify(data, null, 2).substring(0, 600));
           
           if (!data || data.length === 0) {
             return res.json({
@@ -871,7 +857,7 @@ app.all('/mcp', async (req, res) => {
         }
       }
       
-      // TOOL 8: Get Team Rankings ✅ UPDATED WITH NO-DATA HANDLING
+      // TOOL 8: Get Team Rankings
       if (name === 'get_team_rankings') {
         const url = `https://api.collegefootballdata.com/rankings?year=${year}&team=${team}`;
         console.log(`  Fetching: ${url}`);
@@ -892,7 +878,6 @@ app.all('/mcp', async (req, res) => {
           
           const data = await response.json();
           
-          // STEP 1: No data at all
           if (!data || data.length === 0) {
             return res.json({
               jsonrpc: '2.0',
@@ -901,7 +886,6 @@ app.all('/mcp', async (req, res) => {
             });
           }
           
-          // Get final rankings (last week of season)
           const finalWeek = data[data.length - 1];
           
           if (!finalWeek || !finalWeek.polls || finalWeek.polls.length === 0) {
@@ -931,7 +915,6 @@ app.all('/mcp', async (req, res) => {
             }
           });
           
-          // STEP 2: Team wasn't in any final polls
           if (!foundRankings) {
             text = `🏈 ${team.toUpperCase()} - ${year} SEASON\n\n`;
             text += `${team.toUpperCase()} was not ranked in the final ${year} polls.\n\n`;
@@ -954,7 +937,7 @@ app.all('/mcp', async (req, res) => {
         }
       }
       
-      // TOOL 9: Get Team Talent ✅ UPDATED WITH NO-DATA HANDLING
+      // TOOL 9: Get Team Talent
       if (name === 'get_team_talent') {
         const url = `https://api.collegefootballdata.com/talent?year=${year}`;
         console.log(`  Fetching: ${url}`);
@@ -975,14 +958,6 @@ app.all('/mcp', async (req, res) => {
           
           const data = await response.json();
           
-          console.log(`  DEBUG - Talent data length:`, data?.length);
-          if (data && data.length > 0) {
-            console.log(`  DEBUG - First talent entry:`, JSON.stringify(data[0], null, 2).substring(0, 300));
-            const ouEntry = data.find(t => t.school?.toLowerCase() === team.toLowerCase() || t.team?.toLowerCase() === team.toLowerCase());
-            console.log(`  DEBUG - OU talent entry:`, JSON.stringify(ouEntry, null, 2));
-          }
-          
-          // STEP 1: No data at all
           if (!data || data.length === 0) {
             return res.json({
               jsonrpc: '2.0',
@@ -998,7 +973,6 @@ app.all('/mcp', async (req, res) => {
           
           const teamTalent = data.find(t => t.school?.toLowerCase() === team.toLowerCase() || t.team?.toLowerCase() === team.toLowerCase());
           
-          // STEP 2: Data exists but empty for this team
           if (!teamTalent || !teamTalent.talent) {
             return res.json({
               jsonrpc: '2.0',
@@ -1012,7 +986,6 @@ app.all('/mcp', async (req, res) => {
             });
           }
           
-          // STEP 3: Format normal response
           let text = `🏈 ${team.toUpperCase()} TALENT COMPOSITE - ${year}\n\n`;
           text += `Talent Rank: ${teamTalent.talent}\n`;
           
@@ -1034,8 +1007,9 @@ app.all('/mcp', async (req, res) => {
       
       // TOOL 10: Get Team Records
       if (name === 'get_team_records') {
-        const startYear = args.startYear || 2020;
-        const endYear = args.endYear || 2024;
+        // CHANGE 2 & 3: Updated startYear to 2021 and endYear to 2025
+        const startYear = args.startYear || 2021;
+        const endYear = args.endYear || 2025;
         const url = `https://api.collegefootballdata.com/records?team=${team}&startYear=${startYear}&endYear=${endYear}`;
         console.log(`  Fetching: ${url}`);
         
@@ -1116,7 +1090,6 @@ app.all('/mcp', async (req, res) => {
             });
           }
           
-          // Find venue for team
           const venue = data.find(v => 
             v.name?.toLowerCase().includes(team) || 
             (team === 'oklahoma' && v.name?.toLowerCase().includes('memorial'))
@@ -1152,7 +1125,7 @@ app.all('/mcp', async (req, res) => {
         }
       }
       
-      // TOOL 12: Get Returning Production ✅ UPDATED WITH NO-DATA HANDLING
+      // TOOL 12: Get Returning Production
       if (name === 'get_returning_production') {
         const url = `https://api.collegefootballdata.com/player/returning?team=${team}&year=${year}`;
         console.log(`  Fetching: ${url}`);
@@ -1173,9 +1146,6 @@ app.all('/mcp', async (req, res) => {
           
           const data = await response.json();
           
-          console.log(`  DEBUG - Returning production response:`, JSON.stringify(data, null, 2).substring(0, 600));
-          
-          // STEP 1: No data at all
           if (!data || data.length === 0) {
             return res.json({
               jsonrpc: '2.0',
@@ -1191,7 +1161,6 @@ app.all('/mcp', async (req, res) => {
           
           const production = data[0];
           
-          // STEP 2: Data exists but empty for this team
           if (!production || (production.passingUsage === undefined && production.rushingUsage === undefined && production.receivingUsage === undefined)) {
             return res.json({
               jsonrpc: '2.0',
@@ -1205,7 +1174,6 @@ app.all('/mcp', async (req, res) => {
             });
           }
           
-          // STEP 3: Format normal response
           let text = `🏈 ${team.toUpperCase()} RETURNING PRODUCTION - ${year}\n\n`;
           
           if (production.passingUsage !== undefined) {
@@ -1341,9 +1309,3 @@ setInterval(() => {
   fetch(`http://localhost:${PORT}/health`).catch(() => {});
   console.log(`💓 Alive: ${Math.floor(process.uptime())}s`);
 }, 30000);
-
-
-
-
-
-
